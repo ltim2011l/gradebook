@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   // STUDENT, TEACHER
+  firstName String
+  lastName  String
+  groupId   String?
+  isExpelled Boolean @default(false)
+  group     Group?   @relation(fields: [groupId], references: [id])
+
+  taughtSubjects SubjectTeacher[]
+  submissions    Submission[]
+  grades         Grade[]
+  attendances    Attendance[]
+  teamMembers    TeamMember[]
+}
+
+model Group {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  students  User[]
+  schedules Schedule[]
+}
+
+model Subject {
+  id        String         @id @default(uuid())
+  name      String
+  templates LessonTemplate[]
+  schedules Schedule[]
+  teachers  SubjectTeacher[]
+}
+
+model SubjectTeacher {
+  id        String  @id @default(uuid())
+  subjectId String
+  teacherId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  teacher   User    @relation(fields: [teacherId], references: [id])
+}
+
+model Schedule {
+  id        String   @id @default(uuid())
+  date      String
+  startTime String
+  endTime   String
+  room      String?
+  subjectId String
+  groupId   String
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  group     Group    @relation(fields: [groupId], references: [id])
+  attendances Attendance[]
+  grades    Grade[]
+}
+
+model LessonTemplate {
+  id          String   @id @default(uuid())
+  subjectId   String
+  type        String   // LECTURE, PRACTICE, LAB, TEST
+  title       String
+  description String?
+  maxScore    Int      @default(5)
+  deadline    String?
+  fileUrl     String?
+  isTeamWork  Boolean  @default(false)
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  teams       Team[]
+  submissions Submission[]
+}
+
+model Team {
+  id         String         @id @default(uuid())
+  templateId String
+  template   LessonTemplate @relation(fields: [templateId], references: [id])
+  members    TeamMember[]
+  submissions Submission[]
+}
+
+model TeamMember {
+  id     String @id @default(uuid())
+  teamId String
+  userId String
+  team   Team   @relation(fields: [teamId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model Submission {
+  id          String          @id @default(uuid())
+  studentId   String
+  templateId  String?
+  teamId      String?
+  fileUrl     String?
+  comment     String?
+  score       Int?
+  submittedAt String
+  student     User            @relation(fields: [studentId], references: [id])
+  template    LessonTemplate? @relation(fields: [templateId], references: [id])
+  team        Team?           @relation(fields: [teamId], references: [id])
+}
+
+model Grade {
+  id         String    @id @default(uuid())
+  value      Int
+  studentId  String
+  scheduleId String?
+  comment    String?
+  createdAt  String
+  student    User      @relation(fields: [studentId], references: [id])
+  schedule   Schedule? @relation(fields: [scheduleId], references: [id])
+}
+
+model Attendance {
+  id         String   @id @default(uuid())
+  studentId  String
+  scheduleId String
+  status     String   // PRESENT, ABSENT, LATE
+  student    User     @relation(fields: [studentId], references: [id])
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
+
+  @@unique([studentId, scheduleId])
+}
